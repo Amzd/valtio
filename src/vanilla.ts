@@ -24,6 +24,9 @@ type Op =
 /** Function called when a proxy object changes */
 type Listener = (op: Op | undefined, nextVersion: number) => void
 
+/** Function called before a proxy object changes */
+type WillChangeListener = () => void
+
 export type INTERNAL_Op = Op
 
 /** JavaScript primitive types */
@@ -54,11 +57,13 @@ export type Snapshot<T> = T extends { $$valtioSnapshot: infer S }
 
 type RemoveListener = () => void
 type AddListener = (listener: Listener) => RemoveListener
+type AddWillChangeListener = (listener: WillChangeListener) => RemoveListener
 
 type ProxyState = readonly [
   target: object,
   ensureVersion: (nextCheckVersion?: number) => number,
   addListener: AddListener,
+  addWillChangeListener: AddWillChangeListener,
 ]
 
 const canProxyDefault = (x: unknown): boolean =>
@@ -123,10 +128,12 @@ const createHandlerDefault = <T extends object>(
   addPropListener: (prop: string | symbol, propValue: unknown) => void,
   removePropListener: (prop: string | symbol) => void,
   notifyUpdate: (op: Op | undefined) => void,
+  notifyWillChange: () => void,
 ): ProxyHandler<T> => ({
   deleteProperty(target: T, prop: string | symbol) {
     const prevValue = Reflect.get(target, prop)
     removePropListener(prop)
+    notifyWillChange()
     const deleted = Reflect.deleteProperty(target, prop)
     if (deleted) {
       notifyUpdate(createOp?.('delete', prop, prevValue))
@@ -150,6 +157,7 @@ const createHandlerDefault = <T extends object>(
     const nextValue =
       !proxyStateMap.has(value) && canProxy(value) ? proxy(value) : value
     addPropListener(prop, nextValue)
+    notifyWillChange()
     Reflect.set(target, prop, nextValue, receiver)
     notifyUpdate(createOp?.('set', prop, value, prevValue))
     return true
@@ -192,6 +200,7 @@ export function proxy<T extends object>(baseObject: T = {} as T): T {
   }
   let version = versionHolder[0]
   const listeners = new Set<Listener>()
+  const willChangeListeners = new Set<WillChangeListener>()
   const notifyUpdate = (
     op: Op | undefined,
     nextVersion = ++versionHolder[0],
@@ -200,6 +209,9 @@ export function proxy<T extends object>(baseObject: T = {} as T): T {
       checkVersion = version = nextVersion
       listeners.forEach((listener) => listener(op, nextVersion))
     }
+  }
+  const notifyWillChange = () => {
+    willChangeListeners.forEach((listener) => listener())
   }
   let checkVersion = version
   const ensureVersion = (nextCheckVersion = versionHolder[0]) => {
@@ -274,16 +286,29 @@ export function proxy<T extends object>(baseObject: T = {} as T): T {
     }
     return removeListener
   }
+  const addWillChangeListener = (listener: WillChangeListener) => {
+    willChangeListeners.add(listener)
+    const removeListener = () => {
+      willChangeListeners.delete(listener)
+    }
+    return removeListener
+  }
   let initializing = true
   const handler = createHandler<T>(
     () => initializing,
     addPropListener,
     removePropListener,
     notifyUpdate,
+    notifyWillChange,
   )
   const proxyObject = newProxy(baseObject, handler)
   proxyCache.set(baseObject, proxyObject)
-  const proxyState: ProxyState = [baseObject, ensureVersion, addListener]
+  const proxyState: ProxyState = [
+    baseObject,
+    ensureVersion,
+    addListener,
+    addWillChangeListener,
+  ]
   proxyStateMap.set(proxyObject, proxyState)
   Reflect.ownKeys(baseObject).forEach((key) => {
     const desc = Object.getOwnPropertyDescriptor(
@@ -345,6 +370,21 @@ export function subscribe<T extends object>(
     isListenerActive = false
     removeListener()
   }
+}
+
+/**
+ * Subscribes to changes in a proxy object before they happen
+ */
+export function willChange<T extends object>(
+  proxyObject: T,
+  callback: () => void,
+): () => void {
+  const proxyState = proxyStateMap.get(proxyObject as object)
+  if (import.meta.env?.MODE !== 'production' && !proxyState) {
+    console.warn('Please use proxy object')
+  }
+  const addWillChangeListener = (proxyState as ProxyState)[3]
+  return addWillChangeListener(callback)
 }
 
 /**
