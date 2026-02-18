@@ -10,6 +10,17 @@ coverage
 dist
 build
 
+# build artifacts in root (from GitHub install prepare script)
+/*.js
+/*.d.ts
+/*.d.mts
+/*.mts
+/*.mjs
+/esm
+/react
+/vanilla
+ts_version_4.5_and_above_is_required.d.ts
+
 # dotenv environment variables file
 .env
 .env.local
