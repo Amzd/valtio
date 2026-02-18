@@ -60,6 +60,7 @@
   ],
   "sideEffects": false,
   "scripts": {
+    "prepare": "pnpm run build",
     "prebuild": "shx rm -rf dist",
     "build": "pnpm run prebuild && pnpm run \"/^build:.*/\" && pnpm run postbuild",
     "build-watch": "pnpm run \"/^build:.*/\" --watch",
