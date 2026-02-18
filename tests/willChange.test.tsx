@@ -31,6 +31,11 @@ describe('willChange', () => {
     expect(values[0]).toBe(0)
     // Value should now be 1 after the change
     expect(obj.count).toBe(1)
+    
+    obj.count = 2
+    expect(willChangeHandler).toBeCalledTimes(2)
+    // Value should still be 1 when willChange was called
+    expect(values[1]).toBe(1)
   })
 
   it('should be able to unsubscribe from willChange', () => {
