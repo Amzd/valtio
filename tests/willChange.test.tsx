@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { proxy, willChange, subscribe } from 'valtio'
+import { proxy, subscribe, willChange } from 'valtio'
 
 describe('willChange', () => {
   const consoleWarn = console.warn
