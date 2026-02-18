@@ -1,0 +1,43 @@
+# Source files
+src/
+tests/
+
+# Config files
+.codesandbox/
+.github/
+.prettierignore
+eslint.config.mjs
+rollup.config.mjs
+tsconfig.json
+vitest.config.mts
+pnpm-workspace.yaml
+
+# Documentation and examples (keep README and LICENSE)
+docs/
+examples/
+website/
+CONTRIBUTING.md
+
+# Dependencies and logs
+node_modules/
+.pnp
+.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Testing
+coverage/
+
+# Misc
+.DS_Store
+.idea
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Keep build artifacts (*.js, *.d.ts, esm/, react/, vanilla/) for GitHub installs
+# These are built during the prepare script and are needed for the package to work
