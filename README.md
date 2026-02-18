@@ -161,6 +161,28 @@ const stop = watch((get) => {
 })
 ```
 
+#### Subscribe to changes before they happen
+
+You can also subscribe to changes _before_ they happen using `willChange`. This is useful when you need to be notified before a state mutation occurs, but don't need the actual values.
+
+```jsx
+import { willChange } from 'valtio'
+
+const state = proxy({ count: 0 })
+
+// Subscribe to pre-change notifications
+const unsubscribe = willChange(state, () =>
+  console.log('state will change'),
+)
+
+state.count = 1 // logs "state will change" before the value is updated
+
+// Unsubscribe by calling the result
+unsubscribe()
+```
+
+Note: The `willChange` callback is called synchronously before the change is applied, so you can still access the old state values. The callback receives no parameters.
+
 #### Suspend your components
 
 Valtio is compatible with React 19 `use` hook. This eliminates all the async back-and-forth, you can access your data directly while the parent is responsible for fallback state and error handling.

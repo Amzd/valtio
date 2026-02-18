@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { proxy, willChange } from 'valtio'
+import { proxy, willChange, subscribe } from 'valtio'
 
 describe('willChange', () => {
   const consoleWarn = console.warn
@@ -105,6 +105,23 @@ describe('willChange', () => {
     expect(handler2).toBeCalledTimes(1)
   })
 
+  it('should call willChange before the actual change is applied', () => {
+    const obj = proxy({ count: 0 })
+    let capturedValue: number | undefined
+
+    willChange(obj, () => {
+      // At this point, the change should not be applied yet
+      capturedValue = obj.count
+    })
+
+    obj.count = 5
+
+    // The willChange callback should have captured the old value
+    expect(capturedValue).toBe(0)
+    // But the new value should be applied now
+    expect(obj.count).toBe(5)
+  })
+
   it('should call willChange before subscribe callback', async () => {
     const obj = proxy({ count: 0 })
     const callOrder: string[] = []
@@ -113,7 +130,6 @@ describe('willChange', () => {
       callOrder.push('willChange')
     })
 
-    const { subscribe } = await import('valtio')
     subscribe(obj, () => {
       callOrder.push('subscribe')
     })
@@ -121,7 +137,7 @@ describe('willChange', () => {
     obj.count = 1
 
     await vi.advanceTimersByTimeAsync(0)
-    
+
     expect(callOrder).toEqual(['willChange', 'subscribe'])
   })
 })
