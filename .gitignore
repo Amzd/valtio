@@ -31,3 +31,6 @@ examples/**/*/package-lock.json
 examples/**/*/yarn.lock
 examples/**/*/pnpm-lock.yaml
 examples/**/*/bun.lockb
+
+# npm lock file (project uses pnpm)
+package-lock.json
