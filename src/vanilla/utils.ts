@@ -1,4 +1,5 @@
 export { subscribeKey } from './utils/subscribeKey.ts'
+export { willChangeKey } from './utils/willChangeKey.ts'
 export { watch } from './utils/watch.ts'
 export { devtools } from './utils/devtools.ts'
 export { deepClone } from './utils/deepClone.ts'

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { proxy, subscribe, willChange } from 'valtio'
+import { willChangeKey } from 'valtio/utils'
 
 describe('willChange', () => {
   const consoleWarn = console.warn
@@ -144,5 +145,85 @@ describe('willChange', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     expect(callOrder).toEqual(['willChange', 'subscribe'])
+  })
+})
+
+describe('willChangeKey', () => {
+  const consoleWarn = console.warn
+
+  beforeEach(() => {
+    console.warn = vi.fn((message: string) => {
+      if (message === 'Please use proxy object') {
+        return
+      }
+      consoleWarn(message)
+    })
+    vi.useFakeTimers()
+  })
+
+  it('should call willChangeKey callback with the previous value when the key changes', () => {
+    const obj = proxy({ count: 0 })
+    const handler = vi.fn()
+    const values: number[] = []
+
+    willChangeKey(obj, 'count', (v) => {
+      handler()
+      values.push(v)
+    })
+
+    obj.count = 1
+    expect(handler).toBeCalledTimes(1)
+    expect(values[0]).toBe(0)
+
+    obj.count = 2
+    expect(handler).toBeCalledTimes(2)
+    expect(values[1]).toBe(1)
+  })
+
+  it('should only fire for the specified key', () => {
+    const obj = proxy({ count: 0, other: 0 })
+    const handler = vi.fn()
+
+    willChangeKey(obj, 'count', handler)
+
+    obj.other = 5
+    expect(handler).toBeCalledTimes(0)
+
+    obj.count = 1
+    expect(handler).toBeCalledTimes(1)
+  })
+
+  it('should be able to unsubscribe from willChangeKey', () => {
+    const obj = proxy({ count: 0 })
+    const handler = vi.fn()
+
+    const unsubscribe = willChangeKey(obj, 'count', handler)
+    unsubscribe()
+
+    obj.count = 1
+    expect(handler).toBeCalledTimes(0)
+  })
+
+  it('should not call willChangeKey if value does not change', () => {
+    const obj = proxy({ count: 0 })
+    const handler = vi.fn()
+
+    willChangeKey(obj, 'count', handler)
+
+    obj.count = 0
+    expect(handler).toBeCalledTimes(0)
+  })
+
+  it('should call willChangeKey on multiple changes', () => {
+    const obj = proxy({ count: 0 })
+    const handler = vi.fn()
+
+    willChangeKey(obj, 'count', handler)
+
+    obj.count = 1
+    obj.count = 2
+    obj.count = 3
+
+    expect(handler).toBeCalledTimes(3)
   })
 })
