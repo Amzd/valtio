@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { proxy, subscribe, willChange } from 'valtio'
+import { INTERNAL_Op, proxy, subscribe, unstable_enableOp, willChange } from 'valtio'
 
 describe('willChange', () => {
   const consoleWarn = console.warn
@@ -144,5 +144,53 @@ describe('willChange', () => {
     await vi.advanceTimersByTimeAsync(0)
 
     expect(callOrder).toEqual(['willChange', 'subscribe'])
+  })
+
+  it('should pass op param as undefined when op tracking is disabled', () => {
+    const obj = proxy({ count: 0 })
+    const ops: (INTERNAL_Op | undefined)[] = []
+
+    willChange(obj, (op) => {
+      ops.push(op)
+    })
+
+    obj.count = 1
+
+    expect(ops).toHaveLength(1)
+    expect(ops[0]).toBeUndefined()
+  })
+
+  it('should pass op param with set operation when op tracking is enabled', () => {
+    unstable_enableOp(true)
+    const obj = proxy({ count: 0 })
+    const ops: (INTERNAL_Op | undefined)[] = []
+
+    willChange(obj, (op) => {
+      ops.push(op)
+    })
+
+    obj.count = 1
+
+    unstable_enableOp(false)
+
+    expect(ops).toHaveLength(1)
+    expect(ops[0]).toEqual(['set', ['count'], 1, 0])
+  })
+
+  it('should pass op param with delete operation when op tracking is enabled', () => {
+    unstable_enableOp(true)
+    const obj = proxy<{ count?: number }>({ count: 0 })
+    const ops: (INTERNAL_Op | undefined)[] = []
+
+    willChange(obj, (op) => {
+      ops.push(op)
+    })
+
+    delete obj.count
+
+    unstable_enableOp(false)
+
+    expect(ops).toHaveLength(1)
+    expect(ops[0]).toEqual(['delete', ['count'], 0])
   })
 })
