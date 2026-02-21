@@ -25,7 +25,7 @@ type Op =
 type Listener = (op: Op | undefined, nextVersion: number) => void
 
 /** Function called before a proxy object changes */
-type WillChangeListener = () => void
+type WillChangeListener = (prop: string | symbol, value: unknown) => void
 
 export type INTERNAL_Op = Op
 
@@ -128,12 +128,12 @@ const createHandlerDefault = <T extends object>(
   addPropListener: (prop: string | symbol, propValue: unknown) => void,
   removePropListener: (prop: string | symbol) => void,
   notifyUpdate: (op: Op | undefined) => void,
-  notifyWillChange: () => void,
+  notifyWillChange: (prop: string | symbol, value: unknown) => void,
 ): ProxyHandler<T> => ({
   deleteProperty(target: T, prop: string | symbol) {
     const prevValue = Reflect.get(target, prop)
     removePropListener(prop)
-    notifyWillChange()
+    notifyWillChange(prop, undefined)
     const deleted = Reflect.deleteProperty(target, prop)
     if (deleted) {
       notifyUpdate(createOp?.('delete', prop, prevValue))
@@ -157,7 +157,7 @@ const createHandlerDefault = <T extends object>(
     const nextValue =
       !proxyStateMap.has(value) && canProxy(value) ? proxy(value) : value
     addPropListener(prop, nextValue)
-    notifyWillChange()
+    notifyWillChange(prop, nextValue)
     Reflect.set(target, prop, nextValue, receiver)
     notifyUpdate(createOp?.('set', prop, value, prevValue))
     return true
@@ -210,8 +210,8 @@ export function proxy<T extends object>(baseObject: T = {} as T): T {
       listeners.forEach((listener) => listener(op, nextVersion))
     }
   }
-  const notifyWillChange = () => {
-    willChangeListeners.forEach((listener) => listener())
+  const notifyWillChange = (prop: string | symbol, value: unknown) => {
+    willChangeListeners.forEach((listener) => listener(prop, value))
   }
   let checkVersion = version
   const ensureVersion = (nextCheckVersion = versionHolder[0]) => {
@@ -377,7 +377,7 @@ export function subscribe<T extends object>(
  */
 export function willChange<T extends object>(
   proxyObject: T,
-  callback: () => void,
+  callback: (prop: string | symbol, value: unknown) => void,
 ): () => void {
   const proxyState = proxyStateMap.get(proxyObject as object)
   if (import.meta.env?.MODE !== 'production' && !proxyState) {

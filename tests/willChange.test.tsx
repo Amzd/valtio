@@ -161,23 +161,28 @@ describe('willChangeKey', () => {
     vi.useFakeTimers()
   })
 
-  it('should call willChangeKey callback with the previous value when the key changes', () => {
+  it('should call willChangeKey callback with the new value before the key changes', () => {
     const obj = proxy({ count: 0 })
     const handler = vi.fn()
-    const values: number[] = []
+    const newValues: number[] = []
+    const oldValues: number[] = []
 
-    willChangeKey(obj, 'count', (v) => {
+    willChangeKey(obj, 'count', (newValue) => {
       handler()
-      values.push(v)
+      newValues.push(newValue)
+      // At the time of the callback, the change has not been applied yet
+      oldValues.push(obj.count)
     })
 
     obj.count = 1
     expect(handler).toBeCalledTimes(1)
-    expect(values[0]).toBe(0)
+    expect(newValues[0]).toBe(1) // new value is passed
+    expect(oldValues[0]).toBe(0) // old value is still readable via proxyObject
 
     obj.count = 2
     expect(handler).toBeCalledTimes(2)
-    expect(values[1]).toBe(1)
+    expect(newValues[1]).toBe(2)
+    expect(oldValues[1]).toBe(1)
   })
 
   it('should only fire for the specified key', () => {
@@ -191,6 +196,7 @@ describe('willChangeKey', () => {
 
     obj.count = 1
     expect(handler).toBeCalledTimes(1)
+    expect(handler).lastCalledWith(1)
   })
 
   it('should be able to unsubscribe from willChangeKey', () => {
@@ -225,5 +231,8 @@ describe('willChangeKey', () => {
     obj.count = 3
 
     expect(handler).toBeCalledTimes(3)
+    expect(handler).toHaveBeenNthCalledWith(1, 1)
+    expect(handler).toHaveBeenNthCalledWith(2, 2)
+    expect(handler).toHaveBeenNthCalledWith(3, 3)
   })
 })
