@@ -158,7 +158,7 @@ const createHandlerDefault = <T extends object>(
     const nextValue =
       !proxyStateMap.has(value) && canProxy(value) ? proxy(value) : value
     addPropListener(prop, nextValue)
-    const op = createOp?.('set', prop, value, prevValue)
+    const op = createOp?.('set', prop, nextValue, prevValue)
     notifyWillChange(op)
     Reflect.set(target, prop, nextValue, receiver)
     notifyUpdate(op)
